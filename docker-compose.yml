@@ -1,0 +1,15 @@
+services:
+  timesheet:
+    build: .
+    container_name: timesheet
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5103:8080"
+    env_file:
+      - ${DEPLOY_ENV_FILE:-/home/deploy/.env.timesheet}
+    networks:
+      - db-network
+
+networks:
+  db-network:
+    external: true

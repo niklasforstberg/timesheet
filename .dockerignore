@@ -1,0 +1,7 @@
+bin/
+obj/
+clientapp/node_modules/
+clientapp/dist/
+wwwroot/
+appsettings.Development.json
+.git/

@@ -1,0 +1,10 @@
+bin/
+obj/
+appsettings.Development.json
+clientapp/node_modules/
+clientapp/dist/
+wwwroot/
+.DS_Store
+.vs/
+.idea/
+*.tsbuildinfo
