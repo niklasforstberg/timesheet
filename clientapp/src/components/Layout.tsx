@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Clock, FolderKanban, LogOut, Settings } from "lucide-react";
+import { ChartColumn, Clock, FolderKanban, LogOut, Settings } from "lucide-react";
 import { getMe, logout } from "../api/auth";
 import { useClickOutside } from "../lib/useClickOutside";
 
@@ -17,6 +17,8 @@ export default function Layout() {
       </header>
       <aside className="sidebar">
         <NavLink to="/" end><Clock size={18} /><span>Tidrapport</span></NavLink>
+        <div className="sidebar-section">Analysera</div>
+        <NavLink to="/reports"><ChartColumn size={18} /><span>Rapporter</span></NavLink>
         <div className="sidebar-section">Hantera</div>
         <NavLink to="/projects"><FolderKanban size={18} /><span>Projekt</span></NavLink>
         <NavLink to="/settings"><Settings size={18} /><span>Inställningar</span></NavLink>

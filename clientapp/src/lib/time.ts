@@ -90,3 +90,9 @@ export function combine(date: string, time: string): Date {
 export function timeOf(d: Date): string {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
+
+/** Seconds → "8:05" (hours:minutes, for reports) */
+export function formatHours(seconds: number): string {
+  const m = Math.round(Math.max(0, seconds) / 60);
+  return `${Math.floor(m / 60)}:${pad(m % 60)}`;
+}

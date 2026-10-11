@@ -12,6 +12,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Tracker from "./pages/Tracker";
 import Projects from "./pages/Projects";
 import Settings from "./pages/Settings";
+import Reports from "./pages/Reports";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -29,6 +30,7 @@ const router = createBrowserRouter([
         element: <Layout />,
         children: [
           { index: true, element: <Tracker /> },
+          { path: "reports", element: <Reports /> },
           { path: "projects", element: <Projects /> },
           { path: "settings", element: <Settings /> },
         ],
