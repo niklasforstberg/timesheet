@@ -1,30 +1,50 @@
+import { useCallback, useRef, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Clock, FolderKanban, Settings, LogOut } from "lucide-react";
+import { Clock, FolderKanban, LogOut, Settings } from "lucide-react";
 import { getMe, logout } from "../api/auth";
+import { useClickOutside } from "../lib/useClickOutside";
 
 export default function Layout() {
-  const { data: me } = useQuery({ queryKey: ["me"], queryFn: getMe });
-
   return (
     <div className="shell">
       <header className="topbar">
-        <div className="brand">timesheet</div>
-        <nav className="nav">
-          <NavLink to="/" end><Clock size={16} /><span>Tid</span></NavLink>
-          <NavLink to="/projects"><FolderKanban size={16} /><span>Projekt</span></NavLink>
-          <NavLink to="/settings"><Settings size={16} /><span>Inställningar</span></NavLink>
-        </nav>
-        <div className="topbar-user">
-          <span className="muted hide-narrow">{me?.email}</span>
-          <button className="btn btn-ghost btn-icon" onClick={logout} title="Logga ut" aria-label="Logga ut">
-            <LogOut size={16} />
-          </button>
+        <div className="brand">
+          <span className="brand-mark"><Clock size={16} strokeWidth={2.5} /></span>
+          timesheet
         </div>
+        <UserMenu />
       </header>
+      <aside className="sidebar">
+        <NavLink to="/" end><Clock size={18} /><span>Tidrapport</span></NavLink>
+        <div className="sidebar-section">Hantera</div>
+        <NavLink to="/projects"><FolderKanban size={18} /><span>Projekt</span></NavLink>
+        <NavLink to="/settings"><Settings size={18} /><span>Inställningar</span></NavLink>
+      </aside>
       <main className="content">
         <Outlet />
       </main>
+    </div>
+  );
+}
+
+function UserMenu() {
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: getMe });
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useClickOutside(ref, open, useCallback(() => setOpen(false), []));
+
+  return (
+    <div className="picker user-menu" ref={ref}>
+      <button className="avatar" onClick={() => setOpen(o => !o)} aria-label="Konto">
+        {(me?.email ?? "").slice(0, 2).toUpperCase()}
+      </button>
+      {open && (
+        <div className="dropdown dropdown-right">
+          <div className="dropdown-group">{me?.email}</div>
+          <button className="dropdown-item" onClick={logout}><LogOut size={14} /> Logga ut</button>
+        </div>
+      )}
     </div>
   );
 }

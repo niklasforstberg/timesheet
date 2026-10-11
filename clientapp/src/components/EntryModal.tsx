@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createEntry, deleteEntry, getProjects, getTags, updateEntry, type TimeEntry } from "../api/data";
+import { createEntry, deleteEntry, getProjects, updateEntry, type TimeEntry } from "../api/data";
 import { combine, dayKey, timeOf, addDays } from "../lib/time";
 import Modal from "./Modal";
 import ProjectSelect from "./ProjectSelect";
@@ -17,7 +17,6 @@ interface Props {
 export default function EntryModal({ open, onClose, entry }: Props) {
   const qc = useQueryClient();
   const { data: projects = [] } = useQuery({ queryKey: ["projects"], queryFn: getProjects });
-  const { data: tags = [] } = useQuery({ queryKey: ["tags"], queryFn: getTags });
 
   const running = entry !== null && entry.end === null;
   const [description, setDescription] = useState("");
@@ -107,7 +106,7 @@ export default function EntryModal({ open, onClose, entry }: Props) {
         )}
       </div>
       <div className="row" style={{ alignItems: "center" }}>
-        <TagPicker tags={tags} value={tagIds} onChange={setTagIds} />
+        <TagPicker value={tagIds} onChange={setTagIds} />
         <label className="check">
           <input type="checkbox" checked={billable} onChange={e => setBillable(e.target.checked)} />
           Debiterbar
