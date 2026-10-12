@@ -112,6 +112,7 @@ app.MapProjectEndpoints();
 app.MapTagEndpoints();
 app.MapTimeEntryEndpoints();
 app.MapImportEndpoints();
+app.MapTimebankEndpoints();
 
 // MCP clients authenticate with a personal access token, not the SPA's JWT
 app.MapMcp("/mcp")

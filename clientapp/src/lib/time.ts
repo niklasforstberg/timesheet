@@ -96,3 +96,18 @@ export function formatHours(seconds: number): string {
   const m = Math.round(Math.max(0, seconds) / 60);
   return `${Math.floor(m / 60)}:${pad(m % 60)}`;
 }
+
+/** Minutes → "+5:32", "-0:39", "0:00" */
+export function formatSignedMinutes(minutes: number): string {
+  const sign = minutes > 0 ? "+" : minutes < 0 ? "-" : "";
+  const m = Math.abs(minutes);
+  return `${sign}${Math.floor(m / 60)}:${pad(m % 60)}`;
+}
+
+/** "+9:39", "-1,5", "12" (hours) → minutes; null when unreadable. */
+export function parseSignedMinutes(text: string): number | null {
+  const t = text.trim();
+  const negative = /^[-−]/.test(t);
+  const seconds = parseDuration(t.replace(/^[-−+]/, ""));
+  return seconds === null ? null : (negative ? -1 : 1) * Math.round(seconds / 60);
+}

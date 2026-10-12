@@ -141,6 +141,12 @@ namespace Timesheet.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<int>("TimebankOpeningMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly?>("TimebankStart")
+                        .HasColumnType("date");
+
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
 
@@ -239,6 +245,39 @@ namespace Timesheet.Migrations
                     b.HasIndex("UserId", "Start");
 
                     b.ToTable("TimeEntries");
+                });
+
+            modelBuilder.Entity("Timesheet.Models.TimebankTarget", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Minutes")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("OnlyThisWeek")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("ProjectId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly>("WeekStart")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId", "WeekStart", "OnlyThisWeek")
+                        .IsUnique();
+
+                    b.ToTable("TimebankTargets");
                 });
 
             modelBuilder.Entity("Timesheet.Models.User", b =>
@@ -371,6 +410,15 @@ namespace Timesheet.Migrations
                         .IsRequired();
 
                     b.Navigation("Project");
+                });
+
+            modelBuilder.Entity("Timesheet.Models.TimebankTarget", b =>
+                {
+                    b.HasOne("Timesheet.Models.Project", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Timesheet.Models.User", b =>

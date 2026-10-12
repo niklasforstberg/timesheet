@@ -82,3 +82,34 @@ export const importClockify = (apiKey: string, workspaceId: string) =>
 
 export const getSuggestions = (search: string) =>
   apiFetch<TimeEntry[]>(`/api/time-entries/suggestions?search=${encodeURIComponent(search)}`);
+
+export interface TimebankTarget { id: number; weekStart: string; minutes: number; onlyThisWeek: boolean; note: string }
+export interface TimebankWeek {
+  weekStart: string;
+  targetMinutes: number;
+  workedMinutes: number;
+  diffMinutes: number;
+  balanceMinutes: number;
+  note: string;
+  current: boolean;
+}
+export interface Timebank {
+  projectId: number;
+  projectName: string;
+  color: string;
+  start: string;
+  openingMinutes: number;
+  /** After the last finished week. */
+  balanceMinutes: number;
+  targets: TimebankTarget[];
+  /** Newest first; the first one is the current week. */
+  weeks: TimebankWeek[];
+}
+export const getTimebanks = () => apiFetch<Timebank[]>("/api/timebank");
+export const saveTimebank = (projectId: number, start: string, openingMinutes: number) =>
+  apiFetch<void>(`/api/timebank/${projectId}`, json("PUT", { start, openingMinutes }));
+export const deleteTimebank = (projectId: number) => apiFetch<void>(`/api/timebank/${projectId}`, json("DELETE"));
+export const saveTimebankTarget = (projectId: number, t: Omit<TimebankTarget, "id">) =>
+  apiFetch<void>(`/api/timebank/${projectId}/targets`, json("POST", t));
+export const deleteTimebankTarget = (projectId: number, id: number) =>
+  apiFetch<void>(`/api/timebank/${projectId}/targets/${id}`, json("DELETE"));

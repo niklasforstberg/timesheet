@@ -11,6 +11,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<Tag> Tags => Set<Tag>();
     public DbSet<TimeEntry> TimeEntries => Set<TimeEntry>();
+    public DbSet<TimebankTarget> TimebankTargets => Set<TimebankTarget>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -62,6 +63,13 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             e.HasIndex(t => new { t.UserId, t.ClockifyId }).IsUnique().HasFilter("\"ClockifyId\" IS NOT NULL");
             // At most one running timer per user.
             e.HasIndex(t => t.UserId).IsUnique().HasFilter("\"End\" IS NULL").HasDatabaseName("IX_TimeEntries_UserId_Running");
+        });
+
+        b.Entity<TimebankTarget>(e =>
+        {
+            e.Property(t => t.Note).HasMaxLength(200);
+            e.HasOne<Project>().WithMany().HasForeignKey(t => t.ProjectId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(t => new { t.ProjectId, t.WeekStart, t.OnlyThisWeek }).IsUnique();
         });
     }
 }

@@ -16,5 +16,11 @@ public class Project
     public bool Billable { get; set; }
     public bool Archived { get; set; }
 
+    /// <summary>Monday the time bank starts counting from; null when the project has no bank.</summary>
+    public DateOnly? TimebankStart { get; set; }
+
+    /// <summary>Balance carried into the bank at TimebankStart, in minutes (negative = owed).</summary>
+    public int TimebankOpeningMinutes { get; set; }
+
     public string? ClockifyId { get; set; }
 }
