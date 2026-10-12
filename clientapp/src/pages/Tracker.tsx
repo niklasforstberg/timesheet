@@ -6,7 +6,7 @@ import {
   type EntryInput, type TimeEntry,
 } from "../api/data";
 import {
-  addDays, dayKey, formatClock, formatDayHeading, formatDuration, formatWeekHeading,
+  addDays, dayKey, formatClock, formatDayHeading, formatDuration, formatTimer, formatWeekHeading,
   parseClock, parseDuration, secondsBetween, startOfWeek,
 } from "../lib/time";
 import { useClickOutside } from "../lib/useClickOutside";
@@ -345,7 +345,7 @@ function TimerBar({ running, now, onManual }: { running: TimeEntry | null; now: 
   }, [running]);
 
   useEffect(() => {
-    document.title = running ? `${formatDuration(secondsBetween(running.start, null, now))} · timesheet` : "timesheet";
+    document.title = running ? `${formatTimer(secondsBetween(running.start, null, now))} · timesheet` : "timesheet";
   }, [running, now]);
 
   // Autocomplete: earlier tasks matching what is typed, offered once the user starts typing.
@@ -457,7 +457,7 @@ function TimerBar({ running, now, onManual }: { running: TimeEntry | null; now: 
           <button type="button" className={`billable-btn${billable ? " on" : ""}`} title="Debiterbar" aria-pressed={billable}
             onClick={() => change("billable", !billable, setBillable)}>$</button>
         </div>
-        <div className="timer-clock">{running ? formatDuration(secondsBetween(running.start, null, now)) : "00:00:00"}</div>
+        <div className="timer-clock">{running ? formatTimer(secondsBetween(running.start, null, now)) : "0"}</div>
         {running
           ? <button type="button" className="timer-button stop" disabled={stop.isPending} onClick={() => stop.mutate()}>Stoppa</button>
           : <button type="submit" className="timer-button" disabled={start.isPending}>Starta</button>}
