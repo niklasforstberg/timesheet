@@ -9,6 +9,9 @@ public class User
     /// <summary>IANA zone used to tell which day an entry belongs to, e.g. in MCP summaries.</summary>
     public string TimeZone { get; set; } = "Europe/Stockholm";
 
+    /// <summary>Pre-selected on new entries when nothing else is chosen.</summary>
+    public int? DefaultProjectId { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastSeenAt { get; set; }
 

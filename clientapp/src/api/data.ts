@@ -79,3 +79,6 @@ export const getClockifyWorkspaces = (apiKey: string) =>
   apiFetch<Workspace[]>("/api/import/clockify/workspaces", json("POST", { apiKey }));
 export const importClockify = (apiKey: string, workspaceId: string) =>
   apiFetch<ImportResult>("/api/import/clockify", json("POST", { apiKey, workspaceId }));
+
+export const getSuggestions = (search: string) =>
+  apiFetch<TimeEntry[]>(`/api/time-entries/suggestions?search=${encodeURIComponent(search)}`);

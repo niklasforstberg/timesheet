@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createEntry, deleteEntry, getProjects, updateEntry, type TimeEntry } from "../api/data";
+import { getMe } from "../api/auth";
 import { combine, dayKey, timeOf, addDays } from "../lib/time";
 import Modal from "./Modal";
 import ProjectSelect from "./ProjectSelect";
@@ -17,6 +18,7 @@ interface Props {
 export default function EntryModal({ open, onClose, entry }: Props) {
   const qc = useQueryClient();
   const { data: projects = [] } = useQuery({ queryKey: ["projects"], queryFn: getProjects });
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: getMe });
 
   const running = entry !== null && entry.end === null;
   const [description, setDescription] = useState("");
@@ -32,9 +34,11 @@ export default function EntryModal({ open, onClose, entry }: Props) {
     const s = entry ? new Date(entry.start) : new Date(Date.now() - 3600_000);
     const e = entry?.end ? new Date(entry.end) : new Date();
     setDescription(entry?.description ?? "");
-    setProjectId(entry?.projectId ?? null);
+    // A new entry starts on the default project, with its billable setting.
+    const fallback = projects.find(p => p.id === me?.defaultProjectId && !p.archived);
+    setProjectId(entry ? entry.projectId : fallback?.id ?? null);
     setTagIds(entry?.tags.map(t => t.id) ?? []);
-    setBillable(entry?.billable ?? false);
+    setBillable(entry ? entry.billable : fallback?.billable ?? false);
     setDate(dayKey(s));
     setStart(timeOf(s));
     setEnd(timeOf(e));

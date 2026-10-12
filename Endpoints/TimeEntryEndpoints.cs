@@ -26,6 +26,24 @@ public static class TimeEntryEndpoints
                 .ToListAsync();
         });
 
+        // Earlier tasks whose description contains the search text, most recent first —
+        // one row per description + project + tags + billable, for the timer's autocomplete.
+        entries.MapGet("/suggestions", async (string? search, ApplicationDbContext db, HttpContext context) =>
+        {
+            var userId = context.User.UserId();
+            var q = search?.Trim() ?? "";
+            var recent = await ToDto(db.TimeEntries
+                .Where(e => e.UserId == userId && e.End != null && e.Description != ""
+                    && (q == "" || EF.Functions.ILike(e.Description, "%" + q + "%")))
+                .OrderByDescending(e => e.Start)
+                .Take(300))
+                .ToListAsync();
+
+            return recent
+                .DistinctBy(e => (e.Description.ToLowerInvariant(), e.ProjectId, string.Join(',', e.Tags.Select(t => t.Id).Order()), e.Billable))
+                .Take(10);
+        });
+
         entries.MapPost("/", async (EntryRequest request, ApplicationDbContext db, HttpContext context) =>
         {
             var userId = context.User.UserId();

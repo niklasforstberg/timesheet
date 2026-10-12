@@ -3,21 +3,48 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getMe, updateMe } from "../api/auth";
 import { download } from "../api/client";
 import {
-  createApiToken, getApiTokens, getClockifyWorkspaces, importClockify, revokeApiToken,
+  createApiToken, getApiTokens, getClockifyWorkspaces, getProjects, importClockify, revokeApiToken,
   type ImportResult, type Workspace,
 } from "../api/data";
 import { addDays, dayKey } from "../lib/time";
 import Modal from "../components/Modal";
+import ProjectSelect from "../components/ProjectSelect";
 
 export default function Settings() {
   return (
     <>
       <div className="page-header"><h1>Inställningar</h1></div>
+      <DefaultProjectSection />
       <TimeZoneSection />
       <ExportSection />
       <ClockifySection />
       <ApiTokenSection />
     </>
+  );
+}
+
+function DefaultProjectSection() {
+  const qc = useQueryClient();
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: getMe });
+  const { data: projects = [] } = useQuery({ queryKey: ["projects"], queryFn: getProjects });
+  const [projectId, setProjectId] = useState<number | null | undefined>(undefined);
+  const value = projectId === undefined ? me?.defaultProjectId ?? null : projectId;
+
+  const save = useMutation({
+    mutationFn: () => updateMe({ timeZone: me!.timeZone, defaultProjectId: value }),
+    onSuccess: () => { setProjectId(undefined); qc.invalidateQueries({ queryKey: ["me"] }); },
+  });
+
+  return (
+    <section className="card section">
+      <h2>Standardprojekt</h2>
+      <p className="muted small">Väljs automatiskt för nya tidsposter — i timern och när du lägger till tid manuellt. Du kan alltid byta för en enskild post.</p>
+      <div className="inline-add">
+        <ProjectSelect projects={projects} value={value} onChange={setProjectId} />
+        <button className="btn" disabled={!me || projectId === undefined || save.isPending} onClick={() => save.mutate()}>Spara</button>
+      </div>
+      {save.error && <div className="alert alert-error">{save.error.message}</div>}
+    </section>
   );
 }
 
@@ -29,7 +56,7 @@ function TimeZoneSection() {
   const value = zone ?? me?.timeZone ?? "";
 
   const save = useMutation({
-    mutationFn: () => updateMe(value),
+    mutationFn: () => updateMe({ timeZone: value, defaultProjectId: me!.defaultProjectId }),
     onSuccess: () => { setZone(null); qc.invalidateQueries({ queryKey: ["me"] }); },
   });
 

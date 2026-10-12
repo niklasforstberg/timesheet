@@ -252,6 +252,9 @@ namespace Timesheet.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("DefaultProjectId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -285,6 +288,8 @@ namespace Timesheet.Migrations
                         .HasColumnType("character varying(64)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DefaultProjectId");
 
                     b.HasIndex("Email")
                         .IsUnique();
@@ -366,6 +371,14 @@ namespace Timesheet.Migrations
                         .IsRequired();
 
                     b.Navigation("Project");
+                });
+
+            modelBuilder.Entity("Timesheet.Models.User", b =>
+                {
+                    b.HasOne("Timesheet.Models.Project", null)
+                        .WithMany()
+                        .HasForeignKey("DefaultProjectId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("Timesheet.Models.Client", b =>

@@ -2,7 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Calendar, Clock, Copy, EllipsisVertical, List, Play, Trash2 } from "lucide-react";
 import {
-  createEntry, deleteEntry, getEntries, getRunning, startTimer, stopTimer, updateEntry,
+  createEntry, deleteEntry, getEntries, getProjects, getRunning, getSuggestions, startTimer, stopTimer, updateEntry,
   type EntryInput, type TimeEntry,
 } from "../api/data";
 import {
@@ -10,6 +10,7 @@ import {
   parseClock, parseDuration, secondsBetween, startOfWeek,
 } from "../lib/time";
 import { useClickOutside } from "../lib/useClickOutside";
+import { getMe } from "../api/auth";
 import EntryModal from "../components/EntryModal";
 import ProjectPicker from "../components/ProjectPicker";
 import TagPicker from "../components/TagPicker";
@@ -317,6 +318,24 @@ function TimerBar({ running, now, onManual }: { running: TimeEntry | null; now: 
   const [tagIds, setTagIds] = useState<number[]>([]);
   const [billable, setBillable] = useState(false);
 
+  // An idle, untouched timer starts on the default project.
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: getMe });
+  const { data: projects = [] } = useQuery({ queryKey: ["projects"], queryFn: getProjects });
+  const defaultProject = projects.find(p => p.id === me?.defaultProjectId && !p.archived) ?? null;
+  function resetDraft() {
+    setDescription(""); setTagIds([]);
+    setProjectId(defaultProject?.id ?? null);
+    setBillable(defaultProject?.billable ?? false);
+  }
+  // Keyed on the id, so a projects refetch doesn't undo a deliberate "no project".
+  const defaultId = defaultProject?.id;
+  const defaultBillable = defaultProject?.billable ?? false;
+  useEffect(() => {
+    if (running || defaultId === undefined) return;
+    setProjectId(current => current ?? defaultId);
+    setBillable(current => current || defaultBillable);
+  }, [running, defaultId, defaultBillable]);
+
   useEffect(() => {
     if (!running) return;
     setDescription(running.description);
@@ -329,11 +348,49 @@ function TimerBar({ running, now, onManual }: { running: TimeEntry | null; now: 
     document.title = running ? `${formatDuration(secondsBetween(running.start, null, now))} · timesheet` : "timesheet";
   }, [running, now]);
 
-  const start = useMutation({ mutationFn: () => startTimer({ description, projectId, tagIds, billable }), onSuccess: refresh });
+  // Autocomplete: earlier tasks matching what is typed, offered once the user starts typing.
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [highlight, setHighlight] = useState(-1);
+  const [query, setQuery] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setQuery(description.trim()), 150);
+    return () => clearTimeout(t);
+  }, [description]);
+  const { data: suggestions = [] } = useQuery({
+    queryKey: ["suggestions", query],
+    queryFn: () => getSuggestions(query),
+    enabled: suggestOpen && query !== "",
+    placeholderData: prev => prev,
+  });
+  const showSuggestions = suggestOpen && description.trim() !== "" && suggestions.length > 0;
+
+  function pickSuggestion(e: TimeEntry) {
+    const values = { description: e.description, projectId: e.projectId, tagIds: e.tags.map(t => t.id), billable: e.billable };
+    setDescription(values.description);
+    setProjectId(values.projectId);
+    setTagIds(values.tagIds);
+    setBillable(values.billable);
+    setSuggestOpen(false);
+    setHighlight(-1);
+    if (running) patch.mutate(values);
+  }
+
+  function onDescKey(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!showSuggestions) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); setHighlight(h => Math.min(h + 1, suggestions.length - 1)); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setHighlight(h => Math.max(h - 1, -1)); }
+    else if (e.key === "Escape") { setSuggestOpen(false); setHighlight(-1); }
+    else if (e.key === "Enter" && highlight >= 0) { e.preventDefault(); pickSuggestion(suggestions[highlight]); }
+  }
+
+  const start = useMutation({
+    mutationFn: () => startTimer({ description, projectId, tagIds, billable }),
+    onSuccess: () => { setSuggestOpen(false); refresh(); },
+  });
   const stop = useMutation({
     mutationFn: stopTimer,
     onSuccess: () => {
-      setDescription(""); setProjectId(null); setTagIds([]); setBillable(false);
+      resetDraft();
       refresh();
     },
   });
@@ -355,9 +412,38 @@ function TimerBar({ running, now, onManual }: { running: TimeEntry | null; now: 
   return (
     <>
       <form className="timer-bar" onSubmit={e => { e.preventDefault(); if (!running) start.mutate(); }}>
-        <input className="timer-desc" placeholder="Vad jobbar du med?"
-          value={description} onChange={e => setDescription(e.target.value)}
-          onBlur={() => { if (running && description !== running.description) patch.mutate({ description }); }} />
+        <div className="timer-desc-wrap">
+          <input className="timer-desc" placeholder="Vad jobbar du med?" autoComplete="off"
+            role="combobox" aria-expanded={showSuggestions} aria-autocomplete="list"
+            value={description} onKeyDown={onDescKey}
+            onChange={e => { setDescription(e.target.value); setSuggestOpen(true); setHighlight(-1); }}
+            onBlur={() => {
+              setSuggestOpen(false);
+              if (running && description !== running.description) patch.mutate({ description });
+            }} />
+          {showSuggestions && (
+            <div className="suggestions" role="listbox">
+              {suggestions.map((s, i) => (
+                <div key={s.id} role="option" aria-selected={i === highlight}
+                  className={`suggestion${i === highlight ? " active" : ""}`}
+                  // mousedown, not click: the input's blur would close the list first
+                  onMouseDown={e => { e.preventDefault(); pickSuggestion(s); }}
+                  onMouseEnter={() => setHighlight(i)}>
+                  <span className="suggestion-desc">{s.description}</span>
+                  {s.projectName && (
+                    <span className="project-label" style={{ color: s.projectColor ?? undefined }}>
+                      <span className="dot" style={{ background: s.projectColor ?? undefined }} />
+                      <span className="project-label-name">{s.projectName}</span>
+                      {s.clientName && <span className="project-client"> - {s.clientName}</span>}
+                    </span>
+                  )}
+                  {s.tags.length > 0 && <span className="tag-names">{s.tags.map(t => t.name).join(", ")}</span>}
+                  {s.billable && <span className="billable-on">$</span>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         <div className="timer-project">
           <ProjectPicker value={projectId} onChange={p => {
             change("projectId", p?.id ?? null, setProjectId);

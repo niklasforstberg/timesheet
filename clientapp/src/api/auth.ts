@@ -45,9 +45,10 @@ export interface Me {
   id: number;
   email: string;
   timeZone: string;
+  defaultProjectId: number | null;
 }
 
 export const getMe = () => apiFetch<Me>("/api/me");
 
-export const updateMe = (timeZone: string) =>
-  apiFetch<Me>("/api/me", { method: "PUT", body: JSON.stringify({ timeZone }) });
+export const updateMe = (me: Pick<Me, "timeZone" | "defaultProjectId">) =>
+  apiFetch<Me>("/api/me", { method: "PUT", body: JSON.stringify(me) });

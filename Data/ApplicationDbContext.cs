@@ -19,6 +19,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             e.HasIndex(u => u.Email).IsUnique();
             e.Property(u => u.Email).HasMaxLength(256);
             e.Property(u => u.TimeZone).HasMaxLength(64);
+            e.HasOne<Project>().WithMany().HasForeignKey(u => u.DefaultProjectId).OnDelete(DeleteBehavior.SetNull);
         });
 
         b.Entity<ApiToken>(e =>
