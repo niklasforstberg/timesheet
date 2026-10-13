@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Calendar, Clock, Copy, EllipsisVertical, List, Play, Trash2 } from "lucide-react";
+import { Calendar, ChevronDown, Clock, Copy, EllipsisVertical, List, Play, Trash2 } from "lucide-react";
 import {
   createEntry, deleteEntry, getEntries, getProjects, getRunning, getSuggestions, startTimer, stopTimer, updateEntry,
   type EntryInput, type TimeEntry,
@@ -171,7 +171,12 @@ function EntryGroup({ entries }: { entries: TimeEntry[] }) {
           <span className="time-sep">-</span>
           <span className="time-static">{formatClock(latest.end!)}</span>
         </div>
-        <div className="cell cell-date" />
+        <div className="cell cell-date">
+          <button className={`icon-btn group-chevron${open ? " open" : ""}`} onClick={() => setOpen(o => !o)} aria-expanded={open}
+            title={open ? "Fäll ihop" : "Visa alla"} aria-label={open ? "Fäll ihop" : "Visa alla"}>
+            <ChevronDown size={18} />
+          </button>
+        </div>
         <div className="cell cell-duration"><span className="duration-static">{formatDuration(sum(entries))}</span></div>
         <button className="icon-btn" title="Starta igen" aria-label="Starta igen" onClick={() => restart.mutate()}>
           <Play size={18} />

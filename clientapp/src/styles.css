@@ -500,3 +500,5 @@ button { font: inherit; color: inherit; }
   .bank-row { grid-template-columns: 40px repeat(4, minmax(0, 1fr)); }
   .bank-row > :nth-child(2), .bank-row > :nth-child(7) { display: none; }
 }
+.group-chevron svg { transition: transform 0.15s; }
+.group-chevron.open svg { transform: rotate(180deg); }
