@@ -462,7 +462,9 @@ function TimerBar({ running, now, onManual }: { running: TimeEntry | null; now: 
           <button type="button" className={`billable-btn${billable ? " on" : ""}`} title="Debiterbar" aria-pressed={billable}
             onClick={() => change("billable", !billable, setBillable)}>$</button>
         </div>
-        <div className="timer-clock">{running ? formatTimer(secondsBetween(running.start, null, now)) : "0"}</div>
+        {running
+          ? <RunningClock entry={running} now={now} onStart={start => patch.mutate({ start })} />
+          : <div className="timer-clock">0</div>}
         {running
           ? <button type="button" className="timer-button stop" disabled={stop.isPending} onClick={() => stop.mutate()}>Stoppa</button>
           : <button type="submit" className="timer-button" disabled={start.isPending}>Starta</button>}
@@ -475,5 +477,50 @@ function TimerBar({ running, now, onManual }: { running: TimeEntry | null; now: 
       </form>
       {error && <div className="alert alert-error">{error.message}</div>}
     </>
+  );
+}
+
+// The running timer's clock; clicking it opens a small popup to change the start time.
+function RunningClock({ entry, now, onStart }: { entry: TimeEntry; now: number; onStart: (start: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const input = useRef<HTMLInputElement>(null);
+  // Closing saves too: a click outside unmounts the input before it blurs.
+  const close = () => { if (input.current) setStart(input.current.value, input.current); setOpen(false); };
+  const closeRef = useRef(close);
+  closeRef.current = close;
+  useClickOutside(ref, open, useCallback(() => closeRef.current(), []));
+
+  const start = new Date(entry.start);
+  const today = new Date(now);
+  const day = dayKey(start) === dayKey(today) ? "Idag"
+    : dayKey(start) === dayKey(addDays(today, -1)) ? "Igår"
+    : start.toLocaleDateString("sv-SE", { day: "numeric", month: "short" });
+
+  // Keeps the start's date; a time later than now means the day before.
+  function setStart(text: string, input: HTMLInputElement) {
+    const parsed = parseClock(text);
+    if (!parsed) { input.value = formatClock(entry.start); return; }
+    let next = new Date(start);
+    next.setHours(parsed[0], parsed[1], 0, 0);
+    if (next.getTime() > Date.now()) next = addDays(next, -1);
+    if (next.getTime() !== start.getTime()) onStart(next.toISOString());
+  }
+
+  return (
+    <div className="picker timer-clock-wrap" ref={ref}>
+      <button type="button" className="timer-clock" onClick={() => open ? close() : setOpen(true)} aria-expanded={open} title="Ändra starttid">
+        {formatTimer(secondsBetween(entry.start, null, now))}
+      </button>
+      {open && (
+        <div className="dropdown start-popup">
+          <span className="start-popup-label">Starttid</span>
+          <input ref={input} key={entry.start} className="field start-popup-input" defaultValue={formatClock(entry.start)} autoFocus
+            aria-label="Starttid" onFocus={e => e.target.select()}
+            onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); close(); } }} />
+          <span>{day}</span>
+        </div>
+      )}
+    </div>
   );
 }
