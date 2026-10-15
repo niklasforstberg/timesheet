@@ -1,11 +1,15 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ChartColumn, Clock, FolderKanban, LogOut, PiggyBank, Settings } from "lucide-react";
 import { getMe, logout } from "../api/auth";
+import { getRunning } from "../api/data";
+import { formatTimer, secondsBetween } from "../lib/time";
 import { useClickOutside } from "../lib/useClickOutside";
 
 export default function Layout() {
+  useTimerTitle();
+
   return (
     <div className="shell">
       <header className="topbar">
@@ -29,6 +33,18 @@ export default function Layout() {
       </main>
     </div>
   );
+}
+
+// The running timer ticks in the browser tab's title, whichever page is open.
+function useTimerTitle() {
+  const { data: running = null } = useQuery({ queryKey: ["running"], queryFn: getRunning, refetchOnWindowFocus: true });
+  useEffect(() => {
+    if (!running) { document.title = "timesheet"; return; }
+    const tick = () => { document.title = `${formatTimer(secondsBetween(running.start, null))} · timesheet`; };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [running]);
 }
 
 function UserMenu() {

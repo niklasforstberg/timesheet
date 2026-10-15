@@ -349,10 +349,6 @@ function TimerBar({ running, now, onManual }: { running: TimeEntry | null; now: 
     setBillable(running.billable);
   }, [running]);
 
-  useEffect(() => {
-    document.title = running ? `${formatTimer(secondsBetween(running.start, null, now))} · timesheet` : "timesheet";
-  }, [running, now]);
-
   // Autocomplete: earlier tasks matching what is typed, offered once the user starts typing.
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [highlight, setHighlight] = useState(-1);
