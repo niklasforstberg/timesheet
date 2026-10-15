@@ -31,8 +31,7 @@ export function formatTimer(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds));
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
   if (h > 0) return `${h}:${pad(m)}:${pad(sec)}`;
-  if (m > 0) return `${m}:${pad(sec)}`;
-  return String(sec);
+  return `${pad(m)}:${pad(sec)}`;
 }
 
 export function secondsBetween(start: string, end: string | null, now = Date.now()): number {

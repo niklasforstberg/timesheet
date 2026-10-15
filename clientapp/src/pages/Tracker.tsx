@@ -464,7 +464,7 @@ function TimerBar({ running, now, onManual }: { running: TimeEntry | null; now: 
         </div>
         {running
           ? <RunningClock entry={running} now={now} onStart={start => patch.mutate({ start })} />
-          : <div className="timer-clock">0</div>}
+          : <div className="timer-clock">{formatTimer(0)}</div>}
         {running
           ? <button type="button" className="timer-button stop" disabled={stop.isPending} onClick={() => stop.mutate()}>Stoppa</button>
           : <button type="submit" className="timer-button" disabled={start.isPending}>Starta</button>}
