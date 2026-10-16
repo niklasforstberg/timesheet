@@ -33,10 +33,6 @@ export default function TimebankPage() {
 function Bank({ bank, onEdit }: { bank: Timebank; onEdit: () => void }) {
   const current = bank.weeks.find(w => w.current);
   const balanceNow = current?.balanceMinutes ?? bank.balanceMinutes;
-  // The weekly target spread evenly over Monday–Friday; only the days after today count.
-  const day = new Date().getDay();
-  const weekdaysLeft = day >= 1 && day <= 5 ? 5 - day : 0;
-  const projected = balanceNow + Math.round((current?.targetMinutes ?? 0) * weekdaysLeft / 5);
 
   return (
     <section className="bank">
@@ -61,7 +57,7 @@ function Bank({ bank, onEdit }: { bank: Timebank; onEdit: () => void }) {
         </div>
         <div className="stat">
           <div className="stat-label">Saldo om du jobbar enligt schema resten av veckan</div>
-          <div className={`stat-value ${tone(projected)}`}>{formatSignedMinutes(projected)}</div>
+          <div className={`stat-value ${tone(bank.projectedMinutes)}`}>{formatSignedMinutes(bank.projectedMinutes)}</div>
         </div>
       </div>
 
@@ -83,7 +79,7 @@ function Bank({ bank, onEdit }: { bank: Timebank; onEdit: () => void }) {
               <div className="num">{hm(w.workedMinutes)}</div>
               <div className={`num ${tone(w.diffMinutes)}`}>{formatSignedMinutes(w.diffMinutes)}</div>
               <div className={`num ${tone(w.balanceMinutes)}`}>{formatSignedMinutes(w.balanceMinutes)}</div>
-              <div className="muted bank-note">{w.current ? "pågår" : w.note}</div>
+              <div className="muted bank-note">{w.current ? ["pågår", w.note].filter(Boolean).join(" – ") : w.note}</div>
             </div>
           );
         })}

@@ -2,12 +2,15 @@ using Microsoft.EntityFrameworkCore;
 using Timesheet.Data;
 using Timesheet.Infrastructure;
 using Timesheet.Models;
+using Timesheet.Services;
 
 namespace Timesheet.Endpoints;
 
 // Per-project time banks: from TimebankStart, each week's tracked time on the
 // project minus that week's target is added to the opening balance. Weeks run
 // Monday–Sunday in the user's time zone; an entry counts in the week it starts.
+// A scheduled target is spread over Monday–Friday and loses a fifth for each
+// weekday that is a Swedish holiday; single-week exceptions are taken as given.
 public static class TimebankEndpoints
 {
     public static void MapTimebankEndpoints(this IEndpointRouteBuilder app)
@@ -19,7 +22,8 @@ public static class TimebankEndpoints
             var userId = context.User.UserId();
             var zone = await TimeEntryEndpoints.UserZone(db, userId);
             var now = DateTime.UtcNow;
-            var thisWeek = Monday(DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(now, zone)));
+            var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(now, zone));
+            var thisWeek = Monday(today);
 
             var projects = await db.Projects
                 .Where(p => p.UserId == userId && p.TimebankStart != null)
@@ -43,19 +47,29 @@ public static class TimebankEndpoints
                 var weeks = new List<WeekDto>();
                 var balance = p.TimebankOpeningMinutes;
                 var closed = balance;
+                var projected = balance;
                 for (var w = p.TimebankStart!.Value; w <= thisWeek; w = w.AddDays(7))
                 {
+                    var weekdays = Enumerable.Range(0, 5).Select(i => w.AddDays(i)).ToList();
+                    var holidays = weekdays.Select(SwedishHolidays.Name).OfType<string>().ToList();
+                    var workdays = weekdays.Where(d => SwedishHolidays.Name(d) == null).ToList();
+
                     var exception = own.FirstOrDefault(t => t.OnlyThisWeek && t.WeekStart == w);
                     var schedule = own.Where(t => !t.OnlyThisWeek && t.WeekStart <= w).MaxBy(t => t.WeekStart);
-                    var target = exception?.Minutes ?? schedule?.Minutes ?? 0;
+                    var target = exception?.Minutes ?? (int)Math.Round((schedule?.Minutes ?? 0) * workdays.Count / 5.0);
                     var worked = (int)Math.Round(seconds.GetValueOrDefault((p.Id, w)) / 60);
                     balance += worked - target;
                     if (w < thisWeek) closed = balance;
-                    weeks.Add(new WeekDto(w, target, worked, worked - target, balance, exception?.Note ?? "", w == thisWeek));
+                    // The rest of the target spread evenly over the workdays after today.
+                    projected = w < thisWeek || workdays.Count == 0
+                        ? balance
+                        : balance + (int)Math.Round((double)target * workdays.Count(d => d > today) / workdays.Count);
+                    var note = exception?.Note is { Length: > 0 } n ? n : string.Join(", ", holidays);
+                    weeks.Add(new WeekDto(w, target, worked, worked - target, balance, note, w == thisWeek));
                 }
                 weeks.Reverse();
 
-                return new TimebankDto(p.Id, p.Name, p.Color, p.TimebankStart.Value, p.TimebankOpeningMinutes, closed,
+                return new TimebankDto(p.Id, p.Name, p.Color, p.TimebankStart.Value, p.TimebankOpeningMinutes, closed, projected,
                     own.OrderByDescending(t => t.WeekStart).Select(t => new TargetDto(t.Id, t.WeekStart, t.Minutes, t.OnlyThisWeek, t.Note)).ToList(),
                     weeks);
             }).ToList();
@@ -130,7 +144,8 @@ public static class TimebankEndpoints
     /// <summary>BalanceMinutes is cumulative through this week, i.e. as if the week ended now for the current one.</summary>
     public record WeekDto(DateOnly WeekStart, int TargetMinutes, int WorkedMinutes, int DiffMinutes, int BalanceMinutes, string Note, bool Current);
 
-    /// <summary>BalanceMinutes is the balance after the last finished week.</summary>
+    /// <summary>BalanceMinutes is the balance after the last finished week; ProjectedMinutes is where this
+    /// week ends if the remaining workdays go to schedule.</summary>
     public record TimebankDto(int ProjectId, string ProjectName, string Color, DateOnly Start, int OpeningMinutes,
-        int BalanceMinutes, List<TargetDto> Targets, List<WeekDto> Weeks);
+        int BalanceMinutes, int ProjectedMinutes, List<TargetDto> Targets, List<WeekDto> Weeks);
 }

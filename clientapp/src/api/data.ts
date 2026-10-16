@@ -101,6 +101,8 @@ export interface Timebank {
   openingMinutes: number;
   /** After the last finished week. */
   balanceMinutes: number;
+  /** Where this week ends if the remaining workdays go to schedule. */
+  projectedMinutes: number;
   targets: TimebankTarget[];
   /** Newest first; the first one is the current week. */
   weeks: TimebankWeek[];
