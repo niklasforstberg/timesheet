@@ -374,6 +374,7 @@ function TimerBar({ running, now, onManual }: { running: TimeEntry | null; now: 
     setSuggestOpen(false);
     setHighlight(-1);
     if (running) patch.mutate(values);
+    else start.mutate(values);
   }
 
   function onDescKey(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -385,7 +386,8 @@ function TimerBar({ running, now, onManual }: { running: TimeEntry | null; now: 
   }
 
   const start = useMutation({
-    mutationFn: () => startTimer({ description, projectId, tagIds, billable }),
+    // A picked suggestion passes its values, as the state set from it isn't rendered yet.
+    mutationFn: (values?: Omit<EntryInput, "start" | "end">) => startTimer(values ?? { description, projectId, tagIds, billable }),
     onSuccess: () => { setSuggestOpen(false); refresh(); },
   });
   const stop = useMutation({
