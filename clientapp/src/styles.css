@@ -453,6 +453,24 @@ button.timer-clock:hover { color: var(--accent); }
 .bar-value { text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; }
 .bar-share { text-align: right; color: var(--muted-2); font-size: 12px; }
 
+.cal-week-row { cursor: pointer; }
+.cal-week-row:hover .cal-week { color: var(--text); }
+.cal-week-row.selected { box-shadow: inset 3px 0 0 var(--accent); }
+.cal-week-row.selected .cal-week { color: var(--accent); font-weight: 600; }
+.task-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) 80px; gap: 14px; align-items: center;
+  min-height: 40px; padding: 0 16px; border-top: 1px solid var(--hairline);
+}
+.task-row:first-child { border-top: 0; }
+.task-row:not(.task-head):not(.task-total):hover { background: var(--hover); }
+.task-head { background: var(--day); font-size: 12px; color: var(--muted-2); min-height: 34px; }
+.task-head button { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: left; }
+.task-head button:hover { color: var(--text); }
+.task-time { text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; }
+.task-head .task-time { font-weight: 400; }
+.task-total { font-weight: 500; }
+.task-row .bar-label { gap: 10px; }
+
 @media (max-width: 760px) {
   .report-stats { gap: 8px; }
   .bank-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }

@@ -14,6 +14,9 @@ export default function Reports() {
   const [month, setMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   // "" = everything, "none" = no project, "c:<id>" = a client, "p:<id>" = a project
   const [filter, setFilter] = useState("");
+  // The week picked in the calendar (its Monday), listed task by task below.
+  const [week, setWeek] = useState<Date | null>(null);
+  const [sort, setSort] = useState<{ key: "name" | "time"; desc: boolean }>({ key: "time", desc: true });
 
   const monthEnd = new Date(month.getFullYear(), month.getMonth() + 1, 1);
   const gridStart = startOfWeek(month);
@@ -66,13 +69,33 @@ export default function Reports() {
   const projectRows = [...byProject.values()].sort((a, b) => b.seconds - a.seconds);
   const maxProject = projectRows[0]?.seconds ?? 0;
 
+  // A task is a description within a project, as in the timer's suggestions.
+  const byTask = new Map<string, { name: string; project: string | null; client: string | null; color: string | null; seconds: number }>();
+  if (week) {
+    const weekEnd = addDays(week, 7);
+    for (const e of all) {
+      const start = new Date(e.start);
+      if (start < week || start >= weekEnd) continue;
+      const key = `${e.description.trim().toLowerCase()}|${e.projectId}`;
+      const row = byTask.get(key) ?? { name: e.description.trim(), project: e.projectName, client: e.clientName, color: e.projectColor, seconds: 0 };
+      row.seconds += seconds(e);
+      byTask.set(key, row);
+    }
+  }
+  const taskRows = [...byTask.values()].sort((a, b) =>
+    (sort.key === "name" ? a.name.localeCompare(b.name, "sv") : a.seconds - b.seconds) * (sort.desc ? -1 : 1));
+  const weekTotal = taskRows.reduce((s, r) => s + r.seconds, 0);
+  const sortBy = (key: "name" | "time") =>
+    setSort(s => ({ key, desc: s.key === key ? !s.desc : key === "time" }));
+  const arrow = (key: "name" | "time") => (sort.key === key ? (sort.desc ? " ↓" : " ↑") : "");
+
   const weeks: Date[] = [];
   for (let w = gridStart; w < gridEnd; w = addDays(w, 7)) weeks.push(w);
   const today = dayKey(new Date());
   const now0 = new Date();
   const thisMonth = new Date(now0.getFullYear(), now0.getMonth(), 1);
   const isCurrentMonth = dayKey(month) === dayKey(thisMonth);
-  const shift = (n: number) => setMonth(new Date(month.getFullYear(), month.getMonth() + n, 1));
+  const shift = (n: number) => { setMonth(new Date(month.getFullYear(), month.getMonth() + n, 1)); setWeek(null); };
 
   return (
     <>
@@ -81,7 +104,7 @@ export default function Reports() {
           <button className="btn btn-ghost btn-icon" aria-label="Föregående månad" onClick={() => shift(-1)}><ChevronLeft size={18} /></button>
           <h1>{month.toLocaleDateString("sv-SE", { month: "long", year: "numeric" })}</h1>
           <button className="btn btn-ghost btn-icon" aria-label="Nästa månad" onClick={() => shift(1)}><ChevronRight size={18} /></button>
-          {!isCurrentMonth && <button className="btn btn-ghost" onClick={() => setMonth(thisMonth)}>Denna månad</button>}
+          {!isCurrentMonth && <button className="btn btn-ghost" onClick={() => { setMonth(thisMonth); setWeek(null); }}>Denna månad</button>}
         </div>
         <select className="field report-filter" value={filter} onChange={e => setFilter(e.target.value)} aria-label="Filter">
           <option value="">Alla projekt</option>
@@ -114,8 +137,10 @@ export default function Reports() {
         {weeks.map(w => {
           const days = Array.from({ length: 7 }, (_, i) => addDays(w, i));
           const weekTotal = days.reduce((s, d) => s + (perDay.get(dayKey(d)) ?? 0), 0);
+          const wk = dayKey(w);
           return (
-            <div key={dayKey(w)} className="cal-row">
+            <div key={wk} className={`cal-row cal-week-row${week && dayKey(week) === wk ? " selected" : ""}`}
+              title={`Visa uppgifter vecka ${isoWeek(w)}`} onClick={() => setWeek(week && dayKey(week) === wk ? null : w)}>
               <div className="cal-week">{isoWeek(w)}</div>
               {days.map(d => {
                 const key = dayKey(d);
@@ -137,6 +162,37 @@ export default function Reports() {
           );
         })}
       </div>
+
+      {week && (
+        <>
+          <h2 className="report-subhead">Vecka {isoWeek(week)}</h2>
+          <div className="card">
+            <div className="task-row task-head">
+              <button type="button" onClick={() => sortBy("name")}>Uppgift{arrow("name")}</button>
+              <button type="button" className="task-time" onClick={() => sortBy("time")}>Tid{arrow("time")}</button>
+            </div>
+            {taskRows.length === 0 && <div className="empty">Ingen tid den här veckan.</div>}
+            {taskRows.map(r => (
+              <div key={`${r.name}|${r.project}|${r.client}`} className="task-row">
+                <div className="bar-label">
+                  <span className="bar-name">{r.name || "(ingen beskrivning)"}</span>
+                  {r.project && (
+                    <span className="project-label" style={{ color: r.color ?? undefined }}>
+                      <span className="dot" style={{ background: r.color ?? undefined }} />
+                      <span className="project-label-name">{r.project}</span>
+                      {r.client && <span className="project-client"> - {r.client}</span>}
+                    </span>
+                  )}
+                </div>
+                <div className="task-time">{formatHours(r.seconds)}</div>
+              </div>
+            ))}
+            {taskRows.length > 0 && (
+              <div className="task-row task-total"><div>Totalt</div><div className="task-time">{formatHours(weekTotal)}</div></div>
+            )}
+          </div>
+        </>
+      )}
 
       <h2 className="report-subhead">Per projekt</h2>
       <div className="card">
