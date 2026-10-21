@@ -7,6 +7,14 @@ import {
 } from "../api/data";
 import Modal from "../components/Modal";
 
+// Typed hex, "#rgb" or "#rrggbb" with or without "#", as "#rrggbb"; null if it isn't one.
+function parseHex(text: string) {
+  const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(text.trim());
+  if (!m) return null;
+  const h = m[1].length === 3 ? [...m[1]].map(c => c + c).join("") : m[1];
+  return `#${h.toLowerCase()}`;
+}
+
 const COLORS = ["#2f6fed", "#03a9f4", "#009688", "#4caf50", "#8bc34a", "#cddc39", "#ffc107", "#ff9800", "#ff5722", "#e91e63", "#9c27b0", "#607d8b"];
 
 export default function Projects() {
@@ -60,6 +68,8 @@ function ProjectModal({ project, onClose }: { project: Project | "new" | null; o
   const { data: clients = [] } = useQuery({ queryKey: ["clients"], queryFn: getClients });
   const [form, setForm] = useState<ProjectInput | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // What is in the hex field; it only becomes the colour once it parses.
+  const [hex, setHex] = useState("");
 
   // Seed the form whenever a different project is opened.
   const key = project === "new" ? "new" : project?.id;
@@ -67,6 +77,7 @@ function ProjectModal({ project, onClose }: { project: Project | "new" | null; o
   if (key !== seededFor) {
     setSeededFor(key);
     setConfirmDelete(false);
+    setHex(project && project !== "new" ? project.color.toLowerCase() : COLORS[0]);
     setForm(project === null ? null : project === "new"
       ? { name: "", clientId: null, color: COLORS[0], billable: false, archived: false }
       : { id: project.id, name: project.name, clientId: project.clientId, color: project.color, billable: project.billable, archived: project.archived });
@@ -82,6 +93,8 @@ function ProjectModal({ project, onClose }: { project: Project | "new" | null; o
 
   if (!form) return null;
   const set = (patch: Partial<ProjectInput>) => setForm({ ...form, ...patch });
+  const setColor = (color: string) => { set({ color }); setHex(color); };
+  const hexValid = parseHex(hex) !== null;
 
   return (
     <Modal open onClose={onClose} title={form.id ? "Redigera projekt" : "Nytt projekt"}
@@ -90,7 +103,7 @@ function ProjectModal({ project, onClose }: { project: Project | "new" | null; o
           ? <button className="btn btn-danger" style={{ marginRight: "auto" }} onClick={() => remove.mutate()}>Bekräfta borttagning</button>
           : <button className="btn btn-danger-ghost" style={{ marginRight: "auto" }} onClick={() => setConfirmDelete(true)}>Ta bort</button>)}
         <button className="btn btn-ghost" onClick={onClose}>Avbryt</button>
-        <button className="btn btn-primary" disabled={!form.name.trim() || save.isPending} onClick={() => save.mutate()}>Spara</button>
+        <button className="btn btn-primary" disabled={!form.name.trim() || !hexValid || save.isPending} onClick={() => save.mutate()}>Spara</button>
       </>}>
       {(save.error || remove.error) && <div className="alert alert-error">{(save.error ?? remove.error)!.message}</div>}
       {confirmDelete && <div className="alert alert-error">Tidsposterna blir kvar, men utan projekt.</div>}
@@ -111,8 +124,16 @@ function ProjectModal({ project, onClose }: { project: Project | "new" | null; o
         <div className="swatches">
           {COLORS.map(c => (
             <button key={c} type="button" className={`swatch${form.color.toLowerCase() === c ? " active" : ""}`}
-              style={{ background: c }} aria-label={c} onClick={() => set({ color: c })} />
+              style={{ background: c }} aria-label={c} onClick={() => setColor(c)} />
           ))}
+        </div>
+        <div className="color-custom">
+          <input type="color" className="color-picker" aria-label="Välj valfri färg"
+            value={parseHex(form.color) ?? COLORS[0]} onChange={e => setColor(e.target.value)} />
+          <input className={`field color-hex${hexValid ? "" : " invalid"}`} aria-label="Hexkod" placeholder="#03a9f4"
+            spellCheck={false} maxLength={7} value={hex}
+            onChange={e => { setHex(e.target.value); const c = parseHex(e.target.value); if (c) set({ color: c }); }}
+            onBlur={() => { const c = parseHex(hex); if (c) setHex(c); }} />
         </div>
       </div>
       <label className="check">

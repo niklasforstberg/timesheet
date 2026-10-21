@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Timesheet.Data;
 using Timesheet.Infrastructure;
@@ -58,6 +59,8 @@ public static class ProjectEndpoints
         if (string.IsNullOrWhiteSpace(request.Name)) return Results.BadRequest("Namn krävs.");
         if (request.ClientId is { } clientId && !await db.Clients.AnyAsync(c => c.Id == clientId && c.UserId == userId))
             return Results.BadRequest("Okänd klient.");
+        if (!string.IsNullOrWhiteSpace(request.Color) && !Regex.IsMatch(request.Color, "^#[0-9a-fA-F]{6}$"))
+            return Results.BadRequest("Färgen måste vara en hexkod som #03a9f4.");
         return null;
     }
 
