@@ -33,6 +33,10 @@ export default function TimebankPage() {
 function Bank({ bank, onEdit }: { bank: Timebank; onEdit: () => void }) {
   const current = bank.weeks.find(w => w.current);
   const balanceNow = current?.balanceMinutes ?? bank.balanceMinutes;
+  // A day is a fifth of this week's schedule; targets come newest first.
+  const thisWeek = current?.weekStart ?? dayKey(startOfWeek(new Date()));
+  const dayMinutes = (bank.targets.find(t => !t.onlyThisWeek && t.weekStart <= thisWeek)?.minutes ?? 0) / 5;
+  const days = dayMinutes ? Math.round((balanceNow / dayMinutes) * 10) / 10 : null;
 
   return (
     <section className="bank">
@@ -53,7 +57,8 @@ function Bank({ bank, onEdit }: { bank: Timebank; onEdit: () => void }) {
         </div>
         <div className="stat">
           <div className="stat-label">Saldo om veckan slutade nu</div>
-          <div className={`stat-value ${tone(balanceNow)}`}>{formatSignedMinutes(balanceNow)}</div>
+          <div className={`stat-value ${tone(balanceNow)}`}>{formatSignedMinutes(balanceNow)}
+            {days !== null && ` (${days.toLocaleString("sv-SE")} ${Math.abs(days) === 1 ? "dag" : "dagar"})`}</div>
         </div>
         <div className="stat">
           <div className="stat-label">Saldo om du jobbar enligt schema resten av veckan</div>
