@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { getClients, getEntries, getProjects, getRunning, type TimeEntry } from "../api/data";
+import { getClients, getEntries, getHolidays, getProjects, getRunning, type TimeEntry } from "../api/data";
 import { addDays, dayKey, formatHours, isoWeek, secondsBetween, startOfWeek } from "../lib/time";
 
 const WEEKDAYS = ["mån", "tis", "ons", "tor", "fre", "lör", "sön"];
@@ -29,6 +29,11 @@ export default function Reports() {
   const { data: running = null } = useQuery({ queryKey: ["running"], queryFn: getRunning });
   const { data: projects = [] } = useQuery({ queryKey: ["projects"], queryFn: getProjects });
   const { data: clients = [] } = useQuery({ queryKey: ["clients"], queryFn: getClients });
+  // The grid can span two years around new year.
+  const years = [...new Set([gridStart.getFullYear(), addDays(gridEnd, -1).getFullYear()])];
+  const holidays = new Map(useQueries({
+    queries: years.map(y => ({ queryKey: ["holidays", y], queryFn: () => getHolidays(y), staleTime: Infinity })),
+  }).flatMap(q => q.data ?? []).map(h => [h.date, h.name]));
 
   // A running timer keeps the totals ticking.
   const [now, setNow] = useState(Date.now());
@@ -131,7 +136,7 @@ export default function Reports() {
       <div className={`card calendar${isLoading ? " loading" : ""}`}>
         <div className="cal-row cal-head">
           <div className="cal-week">v.</div>
-          {WEEKDAYS.map(d => <div key={d} className="cal-day-name">{d}</div>)}
+          {WEEKDAYS.map((d, i) => <div key={d} className={`cal-day-name${i >= 5 ? " red" : ""}`}>{d}</div>)}
           <div className="cal-sum">Vecka</div>
         </div>
         {weeks.map(w => {
@@ -147,11 +152,13 @@ export default function Reports() {
                 const secs = perDay.get(key) ?? 0;
                 const shade = Math.min(secs / 3600 / FULL_DAY_HOURS, 1);
                 const outside = d < month || d >= monthEnd;
+                const holiday = holidays.get(key);
+                const red = holiday !== undefined || d.getDay() === 0 || d.getDay() === 6;
                 return (
                   <div key={key}
-                    className={`cal-cell${outside ? " outside" : ""}${key === today ? " today" : ""}`}
+                    className={`cal-cell${outside ? " outside" : ""}${red ? " red" : ""}${key === today ? " today" : ""}`}
                     style={secs ? { background: `color-mix(in srgb, var(--accent) ${Math.round(8 + shade * 32)}%, var(--surface))` } : undefined}
-                    title={`${d.toLocaleDateString("sv-SE", { weekday: "long", day: "numeric", month: "long" })}: ${formatHours(secs)}`}>
+                    title={`${d.toLocaleDateString("sv-SE", { weekday: "long", day: "numeric", month: "long" })}${holiday ? ` (${holiday})` : ""}: ${formatHours(secs)}`}>
                     <span className="cal-date">{d.getDate()}</span>
                     <span className="cal-hours">{secs ? formatHours(secs) : ""}</span>
                   </div>

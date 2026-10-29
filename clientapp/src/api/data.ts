@@ -43,6 +43,9 @@ export const saveClient = (c: Omit<Client, "id"> & { id?: number }) =>
 export const deleteClient = (id: number) => apiFetch<void>(`/api/clients/${id}`, json("DELETE"));
 
 export const getTags = () => apiFetch<Tag[]>("/api/tags");
+
+export interface Holiday { date: string; name: string }
+export const getHolidays = (year: number) => apiFetch<Holiday[]>(`/api/holidays/${year}`);
 export const saveTag = (t: Omit<Tag, "id"> & { id?: number }) =>
   t.id ? apiFetch<Tag>(`/api/tags/${t.id}`, json("PUT", t)) : apiFetch<Tag>("/api/tags", json("POST", t));
 export const deleteTag = (id: number) => apiFetch<void>(`/api/tags/${id}`, json("DELETE"));

@@ -435,6 +435,8 @@ button.timer-clock:hover { color: var(--accent); }
   width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;
 }
 .cal-date { font-size: 12px; color: var(--muted-2); }
+.cal-cell.red:not(.today) .cal-date, .cal-head .cal-day-name.red { color: var(--danger); }
+.cal-cell.red.outside .cal-date { color: color-mix(in srgb, var(--danger) 45%, var(--surface)); }
 .cal-hours { font-size: 16px; font-weight: 500; text-align: right; font-variant-numeric: tabular-nums; color: var(--text); }
 .cal-sum {
   display: flex; align-items: center; justify-content: flex-end; padding-right: 14px;
